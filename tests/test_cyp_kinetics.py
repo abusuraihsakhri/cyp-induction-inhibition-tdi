@@ -2,11 +2,36 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import math
 import pytest
 from cyp_kinetics.models import FrontierPayload, ExecutionStatus
 from cyp_kinetics.engine import FrontierDomainEngine
 from cyp_kinetics.agents import KinactKICalculatorAgent, PartitionRatioAssessorAgent, ClinicalDDIProjectionAgent, CYPKineticsCoordinator
 from cyp_kinetics.cli import main
+
+
+def test_frontier_payload_rejects_nan():
+    """NaN values should be rejected by FrontierPayload validation."""
+    with pytest.raises(ValueError, match="primary_metric must be a finite number"):
+        FrontierPayload(task_id="T-NAN", target_identifier="KEY-NAN", primary_metric=math.nan,
+                        secondary_metric=4.0, status_descriptor="NOMINAL")
+
+
+def test_frontier_payload_rejects_inf():
+    """Infinity values should be rejected by FrontierPayload validation."""
+    with pytest.raises(ValueError, match="primary_metric must be a finite number"):
+        FrontierPayload(task_id="T-INF", target_identifier="KEY-INF", primary_metric=math.inf,
+                        secondary_metric=4.0, status_descriptor="NOMINAL")
+
+    with pytest.raises(ValueError, match="secondary_metric must be a finite number"):
+        FrontierPayload(task_id="T-INF2", target_identifier="KEY-INF2", primary_metric=10.0,
+                        secondary_metric=-math.inf, status_descriptor="NOMINAL")
+
+
+def test_batch_file_not_found():
+    """Batch command should return non-zero exit code for missing file."""
+    result = main(["batch", "-i", "nonexistent_file.csv"])
+    assert result == 1
 
 
 def test_sub_agents():

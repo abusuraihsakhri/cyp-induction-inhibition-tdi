@@ -8,6 +8,8 @@ import json
 import time
 import hmac
 import hashlib
+import secrets
+import warnings
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field
@@ -34,11 +36,12 @@ class ResourceLimitExceededException(Exception):
 
 
 def assert_no_phi(text: str) -> None:
+    """Assert text contains no PHI. Raises SecurityException if PHI detected."""
     if not text:
         return
     for pattern in PHI_PATTERNS:
         if pattern.search(str(text)):
-            raise SecurityException(f"PHI Outbound Guard Violation: Sensitive identifier detected with pattern {pattern.pattern}")
+            raise SecurityException("PHI Outbound Guard Violation: Sensitive identifier detected in outbound content")
 
 
 class PHIGuard:
@@ -57,7 +60,16 @@ class PHIGuard:
 class AuditTrail:
     """Cryptographic Tamper-Evident HMAC-SHA256 Audit Trail."""
     def __init__(self, secret_key: Optional[str] = None):
-        self.secret_key = (secret_key or os.getenv("AUDIT_SECRET_KEY", "cyp-induction-inhibition-tdi-master-audit-key-2026")).encode("utf-8")
+        resolved_key = secret_key or os.getenv("AUDIT_SECRET_KEY")
+        if not resolved_key:
+            warnings.warn(
+                "AUDIT_SECRET_KEY not set. Generating ephemeral key. "
+                "Set AUDIT_SECRET_KEY env var for persistent audit integrity across restarts.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            resolved_key = secrets.token_hex(32)
+        self.secret_key = resolved_key.encode("utf-8") if isinstance(resolved_key, str) else resolved_key
         self.logs: List[Dict[str, Any]] = []
 
     def log(self, actor: str, actor_tier: str, event_type: str, details: Dict[str, Any]) -> Dict[str, Any]:

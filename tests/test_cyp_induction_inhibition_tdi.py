@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import math
 import pytest
 from agents.base import PHIGuard, AuditLogger, SecurityException
 from agents.models import SystemTaskPayload, UrgencyLevel, SystemIntegrityStatus
@@ -21,6 +22,19 @@ def test_phi_guard_enforcement():
 
     # Clean text passes
     PHIGuard.assert_no_phi("Analytical assay specimen KEY-001 optimal")
+
+
+def test_phi_guard_error_does_not_leak_pattern():
+    """Ensure PHI guard error messages do not expose regex patterns."""
+    try:
+        PHIGuard.assert_no_phi("Patient MRN-994827 blood culture positive")
+        assert False, "Should have raised SecurityException"
+    except SecurityException as e:
+        error_msg = str(e)
+        # Error should not contain regex pattern details
+        assert "MRN" not in error_msg or "pattern" not in error_msg.lower()
+        assert "re.compile" not in error_msg
+        assert "\\\\b" not in error_msg
 
 
 def test_specialized_workers():
@@ -63,3 +77,24 @@ def test_supervisor_consensus_and_audit():
     assert main(["audit", "--task-id", "CLI-TEST-01"]) == 0
     assert main(["chat", "Explain", "specifications"]) == 0
     assert main(["verify-audit"]) == 0
+
+
+def test_nan_input_rejected():
+    """NaN values should be rejected by input validation."""
+    with pytest.raises(ValueError, match="primary_metric must be a finite number"):
+        SystemTaskPayload(task_id="T-NAN", target_identifier="KEY-NAN", primary_metric=math.nan)
+
+
+def test_inf_input_rejected():
+    """Infinity values should be rejected by input validation."""
+    with pytest.raises(ValueError, match="primary_metric must be a finite number"):
+        SystemTaskPayload(task_id="T-INF", target_identifier="KEY-INF", primary_metric=math.inf)
+
+    with pytest.raises(ValueError, match="secondary_metric must be a finite number"):
+        SystemTaskPayload(task_id="T-INF2", target_identifier="KEY-INF2", primary_metric=10.0, secondary_metric=-math.inf)
+
+
+def test_batch_file_not_found():
+    """Batch command should return non-zero exit code for missing file."""
+    result = main(["batch", "-i", "nonexistent_file.csv"])
+    assert result == 1

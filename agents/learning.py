@@ -1,7 +1,6 @@
 """
 Autonomous Bayesian Calibration & Active Learning Feedback Engine for cyp-induction-inhibition-tdi.
 """
-import math
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 

@@ -4,9 +4,10 @@ Domain: AI Drug Discovery, Structural Biology & Wet-Lab Robotics
 Standard: wwPDB / IUPAC / OpenSMILES / ISAC Standards
 """
 import datetime
+import math
 from enum import Enum
 from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class UrgencyLevel(str, Enum):
@@ -21,6 +22,13 @@ class SystemIntegrityStatus(str, Enum):
     RECALIBRATION_REQUIRED = "RECALIBRATION_REQUIRED"
 
 
+def _validate_finite(value: float, field_name: str) -> float:
+    """Ensure metric values are finite (not NaN or Inf)."""
+    if not isinstance(value, (int, float)) or math.isnan(value) or math.isinf(value):
+        raise ValueError(f"{field_name} must be a finite number, got {value!r}")
+    return float(value)
+
+
 class SystemTaskPayload(BaseModel):
     task_id: str = Field(..., description="Unique task / case identifier")
     target_identifier: str = Field(..., description="Entity, patient key, or genomic/cryptographic target")
@@ -30,6 +38,16 @@ class SystemTaskPayload(BaseModel):
     is_critical_flag: bool = Field(default=False, description="Emergency escalation or high priority trigger")
     attributes: Dict[str, Any] = Field(default_factory=dict, description="Metadata key-value pairs")
     timestamp: str = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
+
+    @field_validator("primary_metric")
+    @classmethod
+    def validate_primary_metric(cls, v):
+        return _validate_finite(v, "primary_metric")
+
+    @field_validator("secondary_metric")
+    @classmethod
+    def validate_secondary_metric(cls, v):
+        return _validate_finite(v, "secondary_metric")
 
 
 class AgentAlert(BaseModel):

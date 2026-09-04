@@ -1,7 +1,6 @@
 """
 Prometheus Operational Metrics Exporter for cyp-induction-inhibition-tdi.
 """
-import time
 from typing import Dict, Any
 
 class SystemMetricsCollector:
