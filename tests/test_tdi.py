@@ -50,3 +50,25 @@ def test_audit_chain_detects_modified_signature():
     chain.log("worker", "supervisor", "START", {"task_id": "TEST-1"})
     chain.logs[0]["current_hash"] = "0" * 64
     assert not chain.verify_integrity()
+
+
+@pytest.mark.parametrize("main", [
+    __import__("cli", fromlist=["main"]).main,
+    __import__("cyp_kinetics.cli", fromlist=["main"]).main,
+])
+def test_cli_tdi_matches_model(main, capsys):
+    rc = main(["tdi", "--kinact", "0.2", "--ki", "5",
+               "--inhibitor", "5", "--time", "10"])
+    assert rc == 0
+    import json
+    result = json.loads(capsys.readouterr().out)
+    assert result["kobs_per_min"] == pytest.approx(0.1)
+
+
+@pytest.mark.parametrize("main", [
+    __import__("cli", fromlist=["main"]).main,
+    __import__("cyp_kinetics.cli", fromlist=["main"]).main,
+])
+def test_cli_tdi_rejects_invalid_parameters(main):
+    assert main(["tdi", "--kinact", "0.2", "--ki", "0",
+                 "--inhibitor", "5", "--time", "10"]) == 1
