@@ -8,7 +8,7 @@ from .models import FrontierPayload, ExecutionStatus
 
 
 class FrontierDomainEngine:
-    STANDARD = "FDA In Vitro Drug Interaction Studies 2020"
+    STANDARD = "Illustrative local screening thresholds (not FDA-validated)"
     PRIMARY_BOUND = 25.0
     SECONDARY_BOUND = 10.0
 
@@ -17,7 +17,7 @@ class FrontierDomainEngine:
         if value > cls.PRIMARY_BOUND:
             return {
                 "summary": "Primary Domain Boundary Deviation",
-                "details": f"Parameter value ({value:.3f}) exceeds operational threshold ({cls.PRIMARY_BOUND:.1f}) under FDA In Vitro Drug Interaction Studies 2020.",
+                "details": f"Parameter value ({value:.3f}) exceeds operational threshold ({cls.PRIMARY_BOUND:.1f}) under a local heuristic (not an FDA guideline threshold).",
                 "remediation": "Engage parameter recalibration and algorithmic verification routine.",
             }
         return None
@@ -28,7 +28,7 @@ class FrontierDomainEngine:
             return {
                 "summary": "Critical Domain Condition Triggered",
                 "details": f"Secondary index ({value:.3f}) with CriticalFlag={is_critical} demands prioritized resolution.",
-                "remediation": "Initiate automated fail-safe state machine and telemetry alert dispatch.",
+                "remediation": "Review the flagged index manually; no automated fail-safe is executed.",
             }
         return None
 
@@ -38,7 +38,7 @@ class FrontierDomainEngine:
         if any(flag in desc_upper for flag in ["VIOLATION", "DISCORDANT", "ANOMALY", "MUTANT", "LEAK"]):
             return {
                 "summary": "Specification / Protocol Anomaly Identified",
-                "details": f"Telemetry status flag '{descriptor}' violates FDA In Vitro Drug Interaction Studies 2020 conformance matrix.",
-                "remediation": "Execute automated rollback or secondary consensus verification.",
+                "details": f"Telemetry status flag '{descriptor}' matches a heuristic anomaly keyword; no regulatory conformance determination was made.",
+                "remediation": "Investigate the descriptor manually; no rollback is performed.",
             }
         return None

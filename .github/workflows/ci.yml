@@ -24,11 +24,24 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install fastapi uvicorn pydantic pytest
+        python -m pip install -e ".[server,test]"
+
+    - name: Check Python syntax and package build
+      run: |
+        python -m compileall -q agents cyp_kinetics cli.py enrichment.py simulator.py
+        python -m build
+        unzip -Z1 dist/*.whl | grep -q 'web/index.html'
+        unzip -Z1 dist/*.whl | grep -q 'web/app.mjs'
 
     - name: Run Pytest Suite
       run: |
-        pytest -v
+        python -m pytest -v
+
+    - name: Validate browser JavaScript and kinetic model
+      run: |
+        node --check web/app.mjs
+        node --check web/kinetics.mjs
+        node --test web/kinetics.test.mjs
 
     - name: Security SAST & Zero-PHI Audit
       run: |

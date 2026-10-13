@@ -1,192 +1,84 @@
-# CYP Induction Inhibition Tdi
+# CYP Induction, Inhibition and Time-Dependent Inactivation
 
-> **Domain:** Computational Biology & AI Drug Discovery
-> **Reference Guidelines & Standards:** `wwPDB, IUPAC & CLSI Computational Guidelines`
+A small, open-source collection of CYP time-dependent inactivation calculations and legacy rule-based audit workflows.
 
-<div align="center">
+## What works
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+- **Browser calculator:** calculate apparent inactivation rate (`k_obs`), remaining enzyme activity, inactivation half-life, and `k_inact/K_I` efficiency from supplied kinetic parameters. Interactive curve with local CSV export.
+- **Python model:** the same one-site saturable equations in `cyp_kinetics.tdi.calculate_tdi`.
+- **CLI and REST:** separate commands for TDI calculations and the original heuristic audit workflows; FastAPI exposes `POST /api/kinetics` and the existing `POST /api/audit`.
+- **Legacy audit workflows:** two preserved implementations in `agents/` and `cyp_kinetics/`. Their configurable-looking metric names are generic thresholds, **not fitted CYP parameters or validated DDI classifications**.
 
-</div>
+## Kinetic model and scope
 
----
+```text
+k_obs = k_inact × [I] / (K_I + [I])
+remaining activity (%) = 100 × exp(−k_obs × time)
+inactivation half-life = ln(2) / k_obs   (defined only when k_obs > 0)
+```
 
-## 📖 What It Does
+`k_inact` and `k_obs` have units min⁻¹; `K_I` and inhibitor concentration `[I]` are in µM; time is in minutes. Values are finite and nonnegative; `K_I` must be greater than zero.
 
-**CYP Induction Inhibition Tdi** is an advanced analytical and computational platform implementing Mechanism-based CYP time-dependent inhibition (Kinact/KI) pharmacokinetic agent.
+**Important limitations:** this is a single-site, constant-inhibitor-concentration model for illustrative in vitro kinetics. It does not fit `k_inact` or `K_I` from experiments, model induction or enzyme turnover, quantify in vivo exposure, or predict clinical DDI magnitude. The existing `enrichment.py` modules are threshold-based placeholders, not implementations of the feature names they describe. Do not use the outputs for clinical decisions.
 
----
+## Browser usage
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+Open the GitHub Pages app once deployed, or serve the checked-out folder locally using `python -m http.server 8080 --directory web` and visit `http://localhost:8080/`. Opening the file directly using `file://` is not supported because browser JavaScript modules require HTTP(S). Enter `k_inact`, `K_I`, inhibitor concentration and preincubation time. The calculated values and activity curve update when you select **Calculate activity**. **Export curve (CSV)** generates 101 locally computed samples.
 
-- **Deterministic Calculation Engine**: Strict compliance with standard reference formulations and thresholds.
-- **Risk & Urgency Classification**: Multi-tier categorization with automated clinical/operational action recommendations.
-- **Validation & Guardrails**: Rigorous input bounds checking and anomaly detection.
+The standalone site is pure JavaScript, not Python or Pyodide; this avoids a large runtime download for four simple equations. The model results are cross-checked by independent Python and JavaScript tests.
 
----
+## Python usage
 
-## 💻 Installation
+Requires Python 3.9 or newer.
 
 ```bash
-# Clone the repository
 git clone https://github.com/abusuraihsakhri/cyp-induction-inhibition-tdi.git
 cd cyp-induction-inhibition-tdi
+python -m pip install -e ".[server,test]"
 
-# Install dependencies
-pip install -e .
+# Numerical TDI calculation (fitted input parameters)
+cyp-induction-inhibition-tdi tdi --kinact 0.2 --ki 5 --inhibitor 5 --time 10
 
-# Optional: Install with FastAPI support
-pip install fastapi uvicorn
-```
-
----
-
-## 💻 CLI Quickstart & Usage
-
-### 1. Run Single Task Evaluation
-```bash
-python cli.py audit --task-id TASK-001 --target KEY-01 --primary 28.5 --secondary 14.2 --status DISCORDANT
-```
-
-### 2. Interactive Chat Query
-```bash
-python cli.py chat "What is the system status?"
-```
-
-### 3. Batch Process CSV Records
-```bash
+# Preserved heuristic audit and CSV processing
+python cli.py audit --primary 28.5 --secondary 14.2 --status DISCORDANT
 python cli.py batch -i sample.csv -o results.csv
+
+# Local server with browser app at http://127.0.0.1:8000/
+python cli.py serve
 ```
 
-### 4. Verify Audit Trail Integrity
-```bash
-python cli.py verify-audit
-```
+### REST API
 
-### 5. Launch REST API Server
-```bash
-python cli.py serve --host 127.0.0.1 --port 8000
-```
-
-### Parameter Reference
-| Parameter | Type | Default | Description |
-|:----------|:-----|:--------|:------------|
-| `--task-id` | str | TASK-2026-001 | Unique task/case identifier |
-| `--target` | str | KEY-TARGET-01 | Entity, patient key, or target |
-| `--primary` | float | 28.5 | Primary domain measurement |
-| `--secondary` | float | 14.2 | Secondary kinetic/confidence score |
-| `--critical` | flag | False | Emergency escalation trigger |
-| `--status` | str | DISCORDANT | Status code or phenotype descriptor |
-| `-i, --input` | str | (required) | Input CSV file path for batch |
-| `-o, --output` | str | results.csv | Output CSV file path for batch |
-
-### Input Data Schema (CSV Batch)
-
-| Field | Type | Description | Requirement |
-|:------|:-----|:------------|:------------|
-| `task_id` | str | Unique task identifier | Required |
-| `target_identifier` | str | Target entity/key | Required |
-| `primary_metric` | float | Primary measurement | Required |
-| `secondary_metric` | float | Secondary score | Required |
-| `is_critical_flag` | bool | Escalation flag | Required |
-| `status_descriptor` | str | Status code | Required |
-
----
-
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-
-### Security Configuration
-
-Set the `AUDIT_SECRET_KEY` environment variable for persistent audit integrity across restarts:
+The FastAPI application serves the browser UI at `/`, docs at `/docs`, and a kinetic endpoint:
 
 ```bash
-# Linux/macOS
-export AUDIT_SECRET_KEY="your-secure-random-key"
-
-# Windows
-set AUDIT_SECRET_KEY=your-secure-random-key
+curl -X POST http://127.0.0.1:8000/api/kinetics \
+  -H 'Content-Type: application/json' \
+  -d '{"kinact_per_min":0.2,"ki_um":5,"inhibitor_um":5,"time_min":10}'
 ```
 
-If not set, a random ephemeral key is generated at startup (audit trail will not persist across restarts).
+`/api/audit`, `/api/chat`, `/api/audit/logs`, `/health`, and the JSON `/metrics` endpoint remain available. The installed CLI also provides an alternate `cyp_kinetics` API server implementation. These server endpoints are not available on GitHub Pages.
 
----
+## Data privacy and audit trails
 
-## 🧪 Testing & Verification
+- The browser calculator performs calculations and creates CSV downloads locally. It has no network requests and does not persist inputs.
+- The Python audit workflow uses an in-memory HMAC-SHA256 chain; the verifier recomputes signatures. The chain itself is **not durable across restarts**.
+- Set a unique `AUDIT_SECRET_KEY` in the environment if needed. If omitted, an ephemeral random signing key is generated. Never commit a signing key to version control.
+- A regex-based identifier guard is present in the legacy audit path. It does **not** establish de-identification or HIPAA compliance; avoid submitting protected health information.
+- Do not expose the FastAPI server publicly without adding authentication, TLS, access controls, and persistence appropriate to your deployment.
 
-Run the automated test suite:
+## Verification and deployment
 
 ```bash
-pytest -v
+python -m pytest -v
+python -m build
+node --check web/app.mjs
+node --test web/kinetics.test.mjs
+docker compose up --build
 ```
 
-Execute high-throughput batch simulation benchmarks:
+CI covers Python 3.10–3.12, builds, API smoke tests, and browser-model unit tests. A GitHub Actions workflow publishes the static `web/` directory to GitHub Pages on updates to `master`. Current browsers with JavaScript modules are supported; obsolete browsers are not.
 
-```bash
-python simulator.py 100
-```
+## License
 
----
-
-## 🐳 Container Deployment
-
-```bash
-docker build -t cyp-induction-inhibition-tdi .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY=your-secure-key cyp-induction-inhibition-tdi
-```
-
-### Docker Compose
-
-```bash
-docker-compose up -d
-```
-
----
-
-## 📁 Project Structure
-
-```
-cyp-induction-inhibition-tdi/
-├── agents/                  # Core agent system with PHI guard & HMAC audit
-│   ├── api.py              # FastAPI REST endpoints
-│   ├── base.py             # Security, PHI guard, audit trail
-│   ├── models.py           # Pydantic data models
-│   ├── supervisor.py       # Multi-agent orchestrator
-│   ├── workers.py          # Specialized domain workers
-│   ├── llm_factory.py      # LLM client factory
-│   ├── learning.py         # Bayesian calibration engine
-│   ├── metrics.py          # Prometheus metrics exporter
-│   └── streamer.py         # WebSocket telemetry broadcaster
-├── cyp_kinetics/           # Alternative CYP-Kin calculation engine
-│   ├── agents.py           # Sub-agent coordination
-│   ├── cli.py              # CLI for CYP-Kin engine
-│   ├── engine.py           # Core algorithmic engine
-│   ├── models.py           # Data models
-│   └── server.py           # FastAPI server factory
-├── tests/                  # Test suite
-├── web/                    # Static web assets
-├── cli.py                  # Main CLI entry point
-├── cyp_kinetics_app.py    # CYP-Kin CLI entry point
-├── enrichment.py           # Enrichment feature engines
-├── simulator.py            # High-throughput testing simulator
-├── sample.csv              # Sample batch input
-├── pyproject.toml          # Project configuration
-├── Dockerfile              # Container build
-└── docker-compose.yml      # Multi-container orchestration
-```
-
----
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).

@@ -8,8 +8,19 @@ import sys
 from agents.models import SystemTaskPayload
 from agents.supervisor import SystemSupervisor
 from agents.base import AuditLogger
+from cyp_kinetics.tdi import calculate_tdi
 
 supervisor = SystemSupervisor(model_provider="mock")
+
+
+def _parse_bool(value):
+    """Parse boolean CSV fields explicitly; bool("False") is True."""
+    normalized = str(value or "").strip().lower()
+    if normalized in ("", "false", "0", "no", "n", "off"):
+        return False
+    if normalized in ("true", "1", "yes", "y", "on"):
+        return True
+    raise ValueError(f"Invalid is_critical_flag: {value!r}; use true or false")
 
 
 def main(argv=None):
@@ -24,6 +35,13 @@ def main(argv=None):
     p_audit.add_argument("--secondary", type=float, default=14.2)
     p_audit.add_argument("--critical", action="store_true")
     p_audit.add_argument("--status", default="DISCORDANT")
+
+    # CYP time-dependent inactivation model (separate from heuristic audits)
+    p_tdi = subparsers.add_parser("tdi", help="Calculate k_obs and remaining activity from supplied k_inact and K_I")
+    p_tdi.add_argument("--kinact", type=float, required=True, help="Maximum inactivation rate (min^-1)")
+    p_tdi.add_argument("--ki", type=float, required=True, help="Half-maximal inactivation concentration (uM)")
+    p_tdi.add_argument("--inhibitor", type=float, required=True, help="Inhibitor concentration (uM)")
+    p_tdi.add_argument("--time", type=float, required=True, help="Preincubation duration (min)")
 
     # Chat
     p_chat = subparsers.add_parser("chat", help="System configuration query")
@@ -68,6 +86,15 @@ def main(argv=None):
         print("=" * 80)
         return 0
 
+    if args.command == "tdi":
+        try:
+            result = calculate_tdi(args.kinact, args.ki, args.inhibitor, args.time)
+        except ValueError as exc:
+            print(f"Invalid TDI parameters: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(result, indent=2))
+        return 0
+
     if args.command == "chat":
         ans = supervisor.query_supervisory_chat(" ".join(args.query))
         print(f"\n[Cyp Induction Inhibition Tdi Supervisor]:\n{ans}\n")
@@ -81,40 +108,52 @@ def main(argv=None):
 
     if args.command == "batch":
         try:
-            with open(args.input, mode="r", encoding="utf-8-sig") as f:
+            with open(args.input, mode="r", encoding="utf-8-sig", newline="") as f:
                 reader = csv.DictReader(f)
                 fieldnames = list(reader.fieldnames or [])
+                if not fieldnames:
+                    raise ValueError("CSV header is missing")
                 rows = list(reader)
-        except FileNotFoundError:
-            print(f"Error: Input file '{args.input}' not found.", file=sys.stderr)
-            return 1
-        except PermissionError:
-            print(f"Error: Permission denied reading '{args.input}'.", file=sys.stderr)
+        except (OSError, UnicodeError, csv.Error, ValueError) as exc:
+            print(f"Error reading CSV: {exc}", file=sys.stderr)
             return 1
 
-        out_fields = fieldnames + ["overall_urgency", "integrity_status", "total_alerts", "audit_hash"]
+        extra_fields = ["overall_urgency", "integrity_status", "total_alerts", "audit_hash"]
+        out_fields = list(dict.fromkeys(fieldnames + extra_fields))
         out_rows = []
-        for r in rows:
-            payload = SystemTaskPayload(
-                task_id=r.get("task_id", "TASK-01"),
-                target_identifier=r.get("target_identifier", "TARGET-01"),
-                primary_metric=float(r.get("primary_metric", 15.0)),
-                secondary_metric=float(r.get("secondary_metric", 5.0)),
-                status_descriptor=r.get("status_descriptor", "NOMINAL"),
-                is_critical_flag=bool(r.get("is_critical_flag", False)),
-            )
-            dossier = supervisor.process_task(payload)
-            row_dict = dict(r)
-            row_dict["overall_urgency"] = dossier.overall_urgency.value
-            row_dict["integrity_status"] = dossier.integrity_status.value
-            row_dict["total_alerts"] = dossier.total_alerts
-            row_dict["audit_hash"] = dossier.audit_hash
-            out_rows.append(row_dict)
+        for line_number, row in enumerate(rows, start=2):
+            try:
+                if None in row:
+                    raise ValueError("row contains more columns than the header")
+                payload = SystemTaskPayload(
+                    task_id=row.get("task_id") or "TASK-01",
+                    target_identifier=row.get("target_identifier") or "TARGET-01",
+                    primary_metric=float(row.get("primary_metric") or 15.0),
+                    secondary_metric=float(row.get("secondary_metric") or 5.0),
+                    status_descriptor=row.get("status_descriptor") or "NOMINAL",
+                    is_critical_flag=_parse_bool(row.get("is_critical_flag")),
+                )
+                dossier = supervisor.process_task(payload)
+                output = dict(row)
+                output.update(
+                    overall_urgency=dossier.overall_urgency.value,
+                    integrity_status=dossier.integrity_status.value,
+                    total_alerts=dossier.total_alerts,
+                    audit_hash=dossier.audit_hash,
+                )
+                out_rows.append(output)
+            except (ValueError, TypeError) as exc:
+                print(f"Invalid CSV row {line_number}: {exc}", file=sys.stderr)
+                return 1
 
-        with open(args.output, mode="w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=out_fields)
-            writer.writeheader()
-            writer.writerows(out_rows)
+        try:
+            with open(args.output, mode="w", encoding="utf-8", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=out_fields)
+                writer.writeheader()
+                writer.writerows(out_rows)
+        except (OSError, UnicodeError, csv.Error) as exc:
+            print(f"Error writing CSV: {exc}", file=sys.stderr)
+            return 1
         print(f"Processed {len(out_rows)} records -> {args.output}")
         return 0
 

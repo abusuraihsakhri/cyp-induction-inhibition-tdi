@@ -93,7 +93,7 @@ class CYPKineticsCoordinator:
             "critical_count": crit_count,
             "warning_count": warn_count,
             "alerts": [a.to_dict() for a in all_alerts],
-            "standard_specification": "FDA In Vitro Drug Interaction Studies 2020",
+            "standard_specification": "Illustrative thresholds only; not an FDA-guideline assessment",
             "consensus_summary": f"Consensus evaluation completed across 3 sub-agents with status [{status.value}].",
         }
 
@@ -105,6 +105,6 @@ class CYPKineticsCoordinator:
         if "status" in q or "ledger" in q:
             return f"CYP-Kin: Time-Dependent Inhibition (TDI) & Kinact/KI Pharmacokinetic Agent currently managing {len(self.execution_ledger)} execution tasks in air-gapped memory."
         elif "standard" in q or "spec" in q:
-            return "Active runtime operating strictly according to FDA In Vitro Drug Interaction Studies 2020 specifications."
+            return "FDA In Vitro Drug Interaction Studies 2020 is background context, not the source of these local screening thresholds."
         else:
             return f"CYP-Kin: Time-Dependent Inhibition (TDI) & Kinact/KI Pharmacokinetic Agent executive coordinator online. Zero-telemetry on-premises surveillance active."

@@ -1,7 +1,7 @@
 """
 Pydantic v2 schemas and data definitions for Cyp Induction Inhibition Tdi.
 Domain: AI Drug Discovery, Structural Biology & Wet-Lab Robotics
-Standard: wwPDB / IUPAC / OpenSMILES / ISAC Standards
+Standard: Local heuristic screening (not clinically validated)
 """
 import datetime
 import math
@@ -57,7 +57,7 @@ class AgentAlert(BaseModel):
     summary: str
     technical_details: str
     actionable_remediation: str
-    standard_reference: str = "wwPDB / IUPAC / OpenSMILES / ISAC Standards"
+    standard_reference: str = "Local heuristic screening (not clinically validated)"
     timestamp: str = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
 
     def to_dict(self) -> Dict[str, Any]:
@@ -75,7 +75,7 @@ class ConsensusDossier(BaseModel):
     total_alerts: int
     critical_alerts_count: int
     alerts: List[AgentAlert]
-    standard_reference: str = "wwPDB / IUPAC / OpenSMILES / ISAC Standards"
+    standard_reference: str = "Local heuristic screening (not clinically validated)"
     consensus_summary: str
     audit_hash: str
     timestamp: str = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).isoformat())
