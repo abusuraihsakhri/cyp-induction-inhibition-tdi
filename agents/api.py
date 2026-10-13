@@ -16,7 +16,7 @@ supervisor = SystemSupervisor(model_provider="mock")
 
 app = FastAPI(
     title="Cyp Induction Inhibition Tdi API",
-    description="Enterprise Distributed Component Platform (AI Drug Discovery, Structural Biology & Wet-Lab Robotics)",
+    description="Heuristic rule audits and a deterministic TDI parameter model",
     version="3.0.0-ENTERPRISE",
 )
 
@@ -49,7 +49,7 @@ def api_kinetics(req: TDIRequest):
 
 @app.get("/health")
 def health():
-    return {"status": "HEALTHY", "service": "cyp-induction-inhibition-tdi", "domain": "AI Drug Discovery, Structural Biology & Wet-Lab Robotics", "standard": "wwPDB / IUPAC / OpenSMILES / ISAC Standards", "version": "3.0.0-ENTERPRISE"}
+    return {"status": "HEALTHY", "service": "cyp-induction-inhibition-tdi", "domain": "AI Drug Discovery, Structural Biology & Wet-Lab Robotics", "model_scope": "illustrative kinetics and heuristic screens; not clinical guidance", "version": "3.0.0-ENTERPRISE"}
 
 
 @app.get("/metrics")
