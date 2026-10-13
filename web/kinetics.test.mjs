@@ -22,3 +22,8 @@ test('invalid and non-finite kinetics are rejected', () => {
     assert.throws(() => calculateTdi(...values), RangeError);
   }
 });
+
+test('large concentrations avoid denominator overflow', () => {
+  const result = calculateTdi(0.2, 1e308, 1e308, 10);
+  close(result.kobs, 0.1);
+});
