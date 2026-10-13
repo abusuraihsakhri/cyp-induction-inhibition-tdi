@@ -39,11 +39,11 @@ function plot(kinact, ki, inhibitor, minutes) {
   }
   for (let i = 0; i <= 4; i++) {
     const x = left + chartW * i / 4;
-    svg.append(element('text', { x, y: height - 10, fill: '#b9c6d8', 'text-anchor': 'middle', 'font-size': 12 }, fmt(end * i / 4)));
+    svg.append(element('text', { x, y: height - 10, fill: '#b9c6d8', 'text-anchor': 'middle', 'font-size': 12 }, fmt(end * (i / 4))));
   }
   let data = '';
   for (let i = 0; i <= 100; i++) {
-    const t = end * i / 100;
+    const t = end * (i / 100);
     const y = calculateTdi(kinact, ki, inhibitor, t).activity;
     data += (i === 0 ? 'M' : 'L') + (left + chartW * i / 100).toFixed(2) + ',' + (top + chartH * (1 - y / 100)).toFixed(2) + ' ';
   }
@@ -80,7 +80,7 @@ document.getElementById('export').addEventListener('click', () => {
   const { kinact, ki, inhibitor, minutes } = latest;
   const csv = ['time_min,inhibitor_um,kinact_per_min,ki_um,kobs_per_min,remaining_activity_pct'];
   for (let i = 0; i <= 100; i++) {
-    const time = minutes * i / 100;
+    const time = minutes * (i / 100);
     const r = calculateTdi(kinact, ki, inhibitor, time);
     csv.push([time, inhibitor, kinact, ki, r.kobs, r.activity].join(','));
   }
