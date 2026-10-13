@@ -30,6 +30,8 @@ jobs:
       run: |
         python -m compileall -q agents cyp_kinetics cli.py enrichment.py simulator.py
         python -m build
+        unzip -Z1 dist/*.whl | grep -q 'web/index.html'
+        unzip -Z1 dist/*.whl | grep -q 'web/app.mjs'
 
     - name: Run Pytest Suite
       run: |
