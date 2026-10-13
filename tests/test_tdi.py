@@ -72,3 +72,9 @@ def test_cli_tdi_matches_model(main, capsys):
 def test_cli_tdi_rejects_invalid_parameters(main):
     assert main(["tdi", "--kinact", "0.2", "--ki", "0",
                  "--inhibitor", "5", "--time", "10"]) == 1
+
+
+def test_large_concentrations_are_stable():
+    r = calculate_tdi(0.2, 1e308, 1e308, 10.0)
+    assert r["kobs_per_min"] == pytest.approx(0.1)
+    assert r["remaining_activity_pct"] == pytest.approx(100 * math.exp(-1))
