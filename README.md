@@ -1,5 +1,7 @@
 # CYP Induction, Inhibition and Time-Dependent Inactivation
 
+### [Open the Live Application →](https://abusuraihsakhri.github.io/cyp-induction-inhibition-tdi/)
+
 A small, open-source collection of CYP time-dependent inactivation calculations and legacy rule-based audit workflows.
 
 ## What works
@@ -23,7 +25,7 @@ inactivation half-life = ln(2) / k_obs   (defined only when k_obs > 0)
 
 ## Browser usage
 
-Open the GitHub Pages app once deployed, or serve the checked-out folder locally using `python -m http.server 8080 --directory web` and visit `http://localhost:8080/`. Opening the file directly using `file://` is not supported because browser JavaScript modules require HTTP(S). Enter `k_inact`, `K_I`, inhibitor concentration and preincubation time. The calculated values and activity curve update when you select **Calculate activity**. **Export curve (CSV)** generates 101 locally computed samples.
+Open the [live GitHub Pages calculator](https://abusuraihsakhri.github.io/cyp-induction-inhibition-tdi/), or serve the checked-out folder locally using `python -m http.server 8080 --directory web` and visit `http://localhost:8080/`. Opening the file directly using `file://` is not supported because browser JavaScript modules require HTTP(S). Enter `k_inact`, `K_I`, inhibitor concentration and preincubation time. The calculated values and activity curve update when you select **Calculate activity**. **Export curve (CSV)** generates 101 locally computed samples.
 
 The standalone site is pure JavaScript, not Python or Pyodide; this avoids a large runtime download for four simple equations. The model results are cross-checked by independent Python and JavaScript tests.
 
