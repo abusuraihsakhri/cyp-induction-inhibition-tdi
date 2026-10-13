@@ -33,10 +33,19 @@ def calculate_tdi(
     if ki_um == 0:
         raise ValueError("ki_um must be greater than zero")
 
-    kobs = kinact_per_min * inhibitor_um / (ki_um + inhibitor_um)
+    # The normalized concentration ratio avoids overflow in K_I + [I].
+    x = inhibitor_um / ki_um if inhibitor_um <= ki_um else ki_um / inhibitor_um
+    fraction = x / (1 + x) if inhibitor_um <= ki_um else 1 / (1 + x)
+    kobs = kinact_per_min * fraction
+    efficiency = kinact_per_min / ki_um
+    if not math.isfinite(efficiency):
+        raise ValueError("k_inact/K_I is outside the representable numeric range")
+    half_life = math.log(2) / kobs if kobs > 0 else None
+    if half_life is not None and not math.isfinite(half_life):
+        half_life = None
     return {
         "kobs_per_min": kobs,
         "remaining_activity_pct": 100 * math.exp(-kobs * time_min),
-        "inactivation_half_life_min": math.log(2) / kobs if kobs > 0 else None,
-        "efficiency_per_min_per_um": kinact_per_min / ki_um,
+        "inactivation_half_life_min": half_life,
+        "efficiency_per_min_per_um": efficiency,
     }
