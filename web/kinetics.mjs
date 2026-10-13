@@ -10,11 +10,16 @@ export function calculateTdi(kinact, ki, inhibitor, minutes) {
     }
   }
   if (ki === 0) throw new RangeError('K_I must be greater than zero');
-  const kobs = kinact * inhibitor / (ki + inhibitor);
+  const x = inhibitor <= ki ? inhibitor / ki : ki / inhibitor;
+  const fraction = inhibitor <= ki ? x / (1 + x) : 1 / (1 + x);
+  const kobs = kinact * fraction;
+  const efficiency = kinact / ki;
+  if (!Number.isFinite(efficiency)) throw new RangeError('k_inact/K_I is outside the numeric range');
+  const halfLife = kobs > 0 ? Math.LN2 / kobs : null;
   return {
     kobs,
     activity: 100 * Math.exp(-kobs * minutes),
-    halfLife: kobs > 0 ? Math.LN2 / kobs : null,
-    efficiency: kinact / ki
+    halfLife: halfLife !== null && Number.isFinite(halfLife) ? halfLife : null,
+    efficiency
   };
 }
