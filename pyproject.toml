@@ -31,4 +31,7 @@ Homepage = "https://github.com/abusuraihsakhri/cyp-induction-inhibition-tdi"
 Repository = "https://github.com/abusuraihsakhri/cyp-induction-inhibition-tdi.git"
 
 [tool.setuptools.packages.find]
-include = ["agents*", "cyp_kinetics*"]
+include = ["agents*", "cyp_kinetics*", "web*"]
+
+[tool.setuptools.package-data]
+web = ["*.html", "*.mjs"]
