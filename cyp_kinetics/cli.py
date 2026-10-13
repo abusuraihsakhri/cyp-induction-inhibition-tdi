@@ -7,6 +7,7 @@ import json
 import sys
 from .models import FrontierPayload
 from .agents import CYPKineticsCoordinator
+from .tdi import calculate_tdi
 
 coordinator = CYPKineticsCoordinator()
 
@@ -33,6 +34,13 @@ def main(argv=None):
     p_audit.add_argument("--secondary", type=float, default=15.1)
     p_audit.add_argument("--critical", action="store_true")
     p_audit.add_argument("--status", default="DISCORDANT")
+
+    # CYP time-dependent inactivation model (separate from heuristic audits)
+    p_tdi = subparsers.add_parser("tdi", help="Calculate k_obs and remaining activity from supplied k_inact and K_I")
+    p_tdi.add_argument("--kinact", type=float, required=True, help="Maximum inactivation rate (min^-1)")
+    p_tdi.add_argument("--ki", type=float, required=True, help="Half-maximal inactivation concentration (uM)")
+    p_tdi.add_argument("--inhibitor", type=float, required=True, help="Inhibitor concentration (uM)")
+    p_tdi.add_argument("--time", type=float, required=True, help="Preincubation duration (min)")
 
     # Chat
     p_chat = subparsers.add_parser("chat", help="System configuration query")
@@ -71,6 +79,15 @@ def main(argv=None):
             print(f"  Details: {a['technical_details']}")
             print(f"  Action:  {a['actionable_remediation']}")
         print("\n" + "=" * 80)
+        return 0
+
+    if args.command == "tdi":
+        try:
+            result = calculate_tdi(args.kinact, args.ki, args.inhibitor, args.time)
+        except ValueError as exc:
+            print(f"Invalid TDI parameters: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(result, indent=2))
         return 0
 
     if args.command == "chat":
